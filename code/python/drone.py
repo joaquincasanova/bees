@@ -50,7 +50,8 @@ os.system("rm /home/jcasa/bees/out/*.JPG")
 #                break
 
 #        cv2.destroyAllWindows()
-        
+os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/ex/")
+
 for i in range(0,56):
     view = 'ex'
     imname = "/home/jcasa/bees/out/ex/{}{}.JPG".format(view,i)
