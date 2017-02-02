@@ -1,5 +1,22 @@
 import numpy as np
 import cv2
+import time
+def hist_plots(img):
+    color = ('b','g','r')
+    for i,col in enumerate(color):
+        histr = cv2.calcHist([img],[i],None,[256],[0,256])
+        plt.plot(histr,color = col)
+        plt.xlim([0,256])
+    plt.show()
+    time.sleep(2)
+    plt.close()
+    #plot histograms
+
+def testwrite(img, pfx, i):
+    oname = "/home/jcasa/bees/out/{}{}.JPG".format(pfx,i)
+    retval=cv2.imwrite(oname,img)
+    print "Wrote ", oname, retval
+    return retval
 
 def nothing(x):
     pass
@@ -103,56 +120,4 @@ def canny_contours(mat, n):
     contours, hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
     return edges, contours, minval, maxval
-
-def labels_to_rgb(labels,rows,cols):
-    
-    B=(labels==0)*255
-    G=(labels==1)*255
-    R=(labels==2)*255
-    
-    B=B+(labels==3)*255
-    G=G+(labels==3)*255
-    R=R+(labels==3)*255
-    
-    B=B.reshape((rows,cols))
-    G=G.reshape((rows,cols))
-    R=R.reshape((rows,cols))
-    
-    segment=np.uint8(cv2.merge((B,G,R)))
-
-    return segment
-
-def rgb_to_labels(segment):
-    B,G,R = cv2.split(segment)
-   
-    l=(B==255)*0+(G==255)*1+(R==255)*2+(np.logical_and(np.logical_and(B==255, G==255),R==255))*3+(np.logical_and(np.logical_and(B==0, G==0),R==0))*4
-    labels=np.float32(l.reshape(np.size(B))[:,np.newaxis])
-    
-    return labels
-
-def labels_to_rgb_2(labels,rows,cols):
-    
-    R=np.uint8((labels==0)*255)
-    G=np.uint8((labels==1)*255)
-    B=np.uint8(np.zeros(G.shape))
-    B=B.reshape((rows,cols))
-    G=G.reshape((rows,cols))
-    R=R.reshape((rows,cols))
-    
-    segment=np.uint8(cv2.merge((B,G,R)))
-
-    return segment
-
-def rgb_to_binary_2(segment):
-    B,G,R = cv2.split(segment)
-   
-    labels=(G<255)*0+(G==255)*1
-    return labels
-
-def rgb_to_labels_2(segment):
-    l=rgb_to_binary_2(segment)
-    labels=np.float32(l.reshape(np.size(l))[:,np.newaxis])
-    
-    return labels
-
 

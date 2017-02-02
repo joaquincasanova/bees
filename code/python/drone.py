@@ -1,72 +1,77 @@
 import cv2
 import numpy as np
 import os
+import beescv
+import time
+from matplotlib import pyplot as plt
 
-def nothing(x):
-    pass
+drawing = False # true if mouse is pressed
+ix,iy = -1,-1
+num = 0
 
-def testwrite(img, pfx, view, i):
+# mouse callback function
+def select_example(event,x,y,flags,param):
+    global ix,iy,drawing,mode,num
+    col = np.random.randint(0,255,3)
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drawing = True
+        ix,iy = x,y
 
-    oname = "/home/joaquin/bees/out/{}{}{}.JPG".format(pfx,view,i)
-    retval=cv2.imwrite(oname,img)
-    print "Wrote ", oname, retval
-
-os.system("rm /home/joaquin/bees/out/*.JPG")
-    
-def cannyContours(mat, n):
-    edges = cv2.Canny(mat,25,50,n)
-
-    cv2.namedWindow('edges')
-    cv2.createTrackbar('MinVal','edges',0,255,nothing)
-    cv2.createTrackbar('MaxVal','edges',0,255,nothing)
-    while(1):
-        cv2.imshow('edges',edges)
-        k = cv2.waitKey(1) & 0xFF
-        if k == 27:
-            break
-
-            # get current positions of four trackbars
-        minval = cv2.getTrackbarPos('MinVal','edges')
-        maxval = cv2.getTrackbarPos('MaxVal','edges')
+    #elif event == cv2.EVENT_MOUSEMOVE:
+    #    if drawing == True:
+    #        cv2.rectangle(img,(ix,iy),(x,y),col,2)
             
-        edges = cv2.Canny(mat,minval,maxval,n)
+    elif event == cv2.EVENT_LBUTTONUP:
+        drawing = False
+        cv2.rectangle(img,(ix,iy),(x,y),col,2)
+        retval = beescv.testwrite(img0[min(iy,y):max(iy,y),min(ix,x):max(ix,x)],'ex',num)
+        time.sleep(2)
+        if retval is True:num+=1
 
-    cv2.destroyAllWindows()
+os.system("rm /home/jcasa/bees/out/*.JPG")
 
-    contours, hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+#view='front'
+#for i in range(1,8):
+#    imname = "/home/jcasa/bees/data/{}{}.JPG".format(view,i)
+    
+#    print "Img ", imname
+#    img = cv2.imread(imname)
+#    print img
+    
+#    if img is not None:
+#        img0 = img.copy()
+#        cv2.namedWindow('image')
+#        cv2.setMouseCallback('image',select_example)
 
-    return edges, contours, minval, maxval
+#        while(1):
+#            cv2.imshow('image',img)
+#            k = cv2.waitKey(1) & 0xFF
+#            if k == 27:
+#                break
 
-view='front'
-for i in range(1,8):
-    imname = "/home/joaquin/bees/data/{}{}.JPG".format(view,i)
+#        cv2.destroyAllWindows()
+        
+for i in range(0,56):
+    view = 'ex'
+    imname = "/home/jcasa/bees/out/ex/{}{}.JPG".format(view,i)
     
     print "Img ", imname
     img = cv2.imread(imname)
-
+    
     if img is not None:
-        img = cv2.pyrDown(img)
-        img = cv2.pyrDown(img)
+        img0 = img.copy()
+        cv2.namedWindow('image')
+        cv2.setMouseCallback('image',select_example)
 
-        hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-        h,s,v = cv2.split(hsv)
-        testwrite(h, "H", view, i)
-        testwrite(s, "S", view, i)
-        testwrite(v, "V", view, i)
-        #img = cv2.pyrDown(img)
-        #img = cv2.pyrDown(img)
-        v=cv2.equalizeHist(v) 
-        s=cv2.equalizeHist(s)
-        h=cv2.equalizeHist(h)
-        testwrite(h, "Hh", view, i)
-        testwrite(v, "Vh", view, i)
-        testwrite(s, "Sh", view, i)
-        
-        sigD=2
-        n=5
-        t=27
-        ksize=(4*sigD+1,4*sigD+1)
-        retval,s = cv2.threshold(s,t,255,cv2.THRESH_BINARY_INV)
-        testwrite(s, "St", view, i)
-        
-#plot histograms
+        while(1):
+            cv2.imshow('image',img)
+            k = cv2.waitKey(1) & 0xFF
+            if k == 27:
+                break
+
+        cv2.destroyAllWindows()
+
+    imname = "/home/jcasa/bees/out/{}{}.JPG".format(view,i)
+    
+    print "Img ", imname
+    img_crop = cv2.imread(imname)
