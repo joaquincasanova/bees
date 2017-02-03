@@ -76,3 +76,54 @@ for i in range(0,56):
     
     print "Img ", imname
     img_crop = cv2.imread(imname)
+        # Convert BGR to HSV
+    gray = cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)
+
+    gs = np.array(gray.shape)    
+    print "shape: ", gs
+    ns = int(max(np.power(2,np.round(np.log2(gray.shape)))))
+    ns=np.array([ns,ns])
+    change = ns-gs
+    print change
+    if change[0]<0:
+        crop_top=int(abs(np.round(change[0]/2)))
+        crop_bottom=int(abs(change[0]+crop_top))
+        gray_crop = gray[crop_top:-crop_bottom,:]
+        change[0]=0
+    else:
+        gray_crop = gray
+
+    gs = np.array(gray_crop.shape)    
+    print "shape: ", gs
+        
+    if change[1]<0:
+        crop_left=int(abs(np.round(change[1]/2)))
+        crop_right=int(abs(change[1]+crop_left))
+        gray_crop2 = gray_crop[:,crop_left:-crop_right]
+        change[1]=0
+    else:
+        gray_crop2 = gray_crop
+
+    gs = np.array(gray_crop2.shape)    
+    print "shape: ", gs
+
+    top = int(np.round(change[0]/2))
+    bottom = int(change[0]-top)
+    
+    left = int(np.round(change[1]/2))
+    right = int(change[1]-left)
+
+    gray_pad = cv2.copyMakeBorder(gray_crop2,top,bottom,left,right,borderType=cv2.BORDER_REPLICATE)
+
+    
+    while(1):
+        cv2.imshow("gray",gray_pad)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+    print "new shape: ", gray_pad.shape
+    
+    gray_pad_up = cv2.pyrUp
+    gray_pad_down = cv2.pyrDown
