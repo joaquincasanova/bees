@@ -22,7 +22,7 @@ def nothing(x):
     pass
 
 def normalize(x):
-    y=(x-np.min(x))/(np.max(x)-np.min(x))*255
+    y=(x-np.min(x))/(np.max(x)-np.min(x))*255.
     return y
 
 def localSD(mat, n):
