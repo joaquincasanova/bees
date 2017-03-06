@@ -4,204 +4,167 @@ import os
 import beescv
 import time
 from matplotlib import pyplot as plt
-
-drawing = False # true if mouse is pressed
-ix,iy = -1,-1
-num = 0
-    
-# mouse callback function
-def select_example(event,x,y,flags,param):
-    global ix,iy,drawing,mode,num
-    col = np.random.randint(0,255,3)
-    if event == cv2.EVENT_LBUTTONDOWN:
-        drawing = True
-        ix,iy = x,y
-
-    #elif event == cv2.EVENT_MOUSEMOVE:
-    #    if drawing == True:
-    #        cv2.rectangle(img,(ix,iy),(x,y),col,2)
-            
-    elif event == cv2.EVENT_LBUTTONUP:
-        drawing = False
-        cv2.rectangle(img,(ix,iy),(x,y),col,2)
-        retval = beescv.testwrite(img0[min(iy,y):max(iy,y),min(ix,x):max(ix,x)],'ex',num)
-        time.sleep(2)
-            
-    elif event == cv2.EVENT_RBUTTONDOWN:
-        retval = beescv.testwrite(img0,'ex',num)
-        time.sleep(2)
         
-os.system("rm /home/jcasa/bees/out/*.JPG")
+os.system("rm /home/jcasa/bees/out/*.JPG")    
 
 view='front'
-exname = "/home/jcasa/bees/out/ex/ex55.JPG"
-if cv2.imread(exname) is None:
-    for i in range(1,8):
-        imname = "/home/jcasa/bees/data/{}{}.JPG".format(view,i)
-
-        print "Img ", imname
-        img = cv2.imread(imname)
-        
-        if img is not None:
-            img0 = img.copy()
-            cv2.namedWindow('image')
-            cv2.setMouseCallback('image',select_example)
-
-            while(1):
-                cv2.imshow('image',img)
-                k = cv2.waitKey(1) & 0xFF
-                if k == 27:
-                    break
-
-            cv2.destroyAllWindows()
-
-    os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/ex/")
-
+    
+c16 = np.zeros([16*16,1])
+c32 = np.zeros([32*32,1])  
 c64 = np.zeros([64*64,1])
 c128 = np.zeros([128*128,1])
+c256 = np.zeros([256*256,1])
+c = [c16,c32,c64,c128,c256]
+        
+os.system("rm /home/jcasa/bees/out/bw/*.JPG")
 
 for i in range(0,56):
-    num=i
     view = 'ex'
     imname = "/home/jcasa/bees/out/ex/{}{}.JPG".format(view,i)
     
     print "Img ", imname
     img = cv2.imread(imname)
     if img is not None:
-        bwname = "/home/jcasa/bees/out/bw/{}{}.JPG".format('128bw',i)
-        print bwname
-        if cv2.imread(bwname) is None:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.equalizeHist(gray)
+
+        gs = np.array(gray.shape)    
+        ns = int(min(256,max(16, int(max(np.power(2,np.round(np.log2(gray.shape))))))))
+        ns=np.array([ns,ns])
+        change = ns-gs
+        if change[0]<0:
+            crop_top=int(abs(np.round(change[0]/2)))
+            crop_bottom=int(abs(change[0]+crop_top))
+            gray_crop = gray[crop_top:-crop_bottom,:]
+            change[0]=0
+        else:
+            gray_crop = gray
+
+        gs = np.array(gray_crop.shape)    
+
+        if change[1]<0:
+            crop_left=int(abs(np.round(change[1]/2)))
+            crop_right=int(abs(change[1]+crop_left))
+            gray_crop2 = gray_crop[:,crop_left:-crop_right]
+            change[1]=0
+        else:
+            gray_crop2 = gray_crop
+
+        gs = np.array(gray_crop2.shape)    
+
+        top = int(np.round(change[0]/2))
+        bottom = int(change[0]-top)
+
+        left = int(np.round(change[1]/2))
+        right = int(change[1]-left)
+
+        gray_pad = cv2.copyMakeBorder(gray_crop2,top,bottom,left,right,borderType=cv2.BORDER_REPLICATE)
+        pfx = str(max(gray_pad.shape)) + 'bw'
+        retval = beescv.testwrite(gray_pad,pfx,i)
+        os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/bw/")
+
+        g16name = '/home/jcasa/bees/out/bw/16bw%s.JPG'%(i)
+        g32name = '/home/jcasa/bees/out/bw/32bw%s.JPG'%(i)
+        g64name = '/home/jcasa/bees/out/bw/64bw%s.JPG'%(i)
+        g128name = '/home/jcasa/bees/out/bw/128bw%s.JPG'%(i)
+        g256name = '/home/jcasa/bees/out/bw/256bw%s.JPG'%(i)
+        g16 = cv2.imread(g16name,cv2.IMREAD_GRAYSCALE)
+        g32 = cv2.imread(g32name,cv2.IMREAD_GRAYSCALE)
+        g64 = cv2.imread(g64name,cv2.IMREAD_GRAYSCALE)
+        g128 = cv2.imread(g128name,cv2.IMREAD_GRAYSCALE)
+        g256 = cv2.imread(g256name,cv2.IMREAD_GRAYSCALE)
+
+        g = [g16,g32,g64,g128,g256]
+        gn =[g16name,g32name,g64name,g128name,g256name]
+        k=0
+        for ig in g:
+            k+=1
+            if ig is not None:
+                g2k = np.int(np.power(2,k+3))
+                print "Original is: ", g2k
+                break
+        if k==1:
+            g32 = cv2.pyrUp(g16)
+            g64 = cv2.pyrUp(g32)
+            g128 = cv2.pyrUp(g64)
+            g256 = cv2.pyrUp(g128)
+        elif k==2:
+            g16 = cv2.pyrDown(g32)
+            g64 = cv2.pyrUp(g32)
+            g128 = cv2.pyrUp(g64)
+            g256 = cv2.pyrUp(g128)
+        elif k==3:
+            g32 = cv2.pyrDown(g64)
+            g16 = cv2.pyrDown(g32)
+            g128 = cv2.pyrUp(g64)
+            g256 = cv2.pyrUp(g128)
+        elif k==4:
+            g64 = cv2.pyrDown(g128)
+            g32 = cv2.pyrDown(g64)
+            g16 = cv2.pyrDown(g32)
+            g256 = cv2.pyrUp(g128)
+        elif k==5:
+            g128 = cv2.pyrDown(g256)
+            g64 = cv2.pyrDown(g128)
+            g32 = cv2.pyrDown(g64)
+            g16 = cv2.pyrDown(g32)
             
-            img0 = img.copy()
-            cv2.namedWindow('image')
-            cv2.setMouseCallback('image',select_example)
+                    
+        g = [g16,g32,g64,g128,g256]
+        gc = [None,None,None,None,None]
+        k=0
+        for ig in g:
+            print gn[k], cv2.imwrite(gn[k],ig)
+            gc[k] = ig.reshape([-1,1])-np.mean(ig.reshape([-1,1]))
+            c[k] = np.hstack((c[k],gc[k]))
+            k+=1
+k=0
+e = [None,None,None,None,None]
+p = [None,None,None,None,None]
+im = [None,None,None,None,None]
 
-            while(1):
-                cv2.imshow('image',img)
-                k = cv2.waitKey(1) & 0xFF
-                if k == 27:
-                    break
-
-            cv2.destroyAllWindows()
-
-            imname = "/home/jcasa/bees/out/{}{}.JPG".format(view,i)
-
-            print "Img ", imname
-            img_crop = cv2.imread(imname)
-                # Convert BGR to HSV
-            gray = cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
-            gray = cv2.equalizeHist(gray)
-
-            gs = np.array(gray.shape)    
-            ns = int(max(16, int(max(np.power(2,np.round(np.log2(gray.shape)))))))
-            ns=np.array([ns,ns])
-            change = ns-gs
-            if change[0]<0:
-                crop_top=int(abs(np.round(change[0]/2)))
-                crop_bottom=int(abs(change[0]+crop_top))
-                gray_crop = gray[crop_top:-crop_bottom,:]
-                change[0]=0
-            else:
-                gray_crop = gray
-
-            gs = np.array(gray_crop.shape)    
-            
-            if change[1]<0:
-                crop_left=int(abs(np.round(change[1]/2)))
-                crop_right=int(abs(change[1]+crop_left))
-                gray_crop2 = gray_crop[:,crop_left:-crop_right]
-                change[1]=0
-            else:
-                gray_crop2 = gray_crop
-
-            gs = np.array(gray_crop2.shape)    
-            
-            top = int(np.round(change[0]/2))
-            bottom = int(change[0]-top)
-
-            left = int(np.round(change[1]/2))
-            right = int(change[1]-left)
-
-            gray_pad = cv2.copyMakeBorder(gray_crop2,top,bottom,left,right,borderType=cv2.BORDER_REPLICATE)
-            gray_pad_pyr = cv2.pyrDown(gray_pad)
-            pfx = str(max(gray_pad_pyr.shape)) + 'bw'
-            retval = beescv.testwrite(gray_pad_pyr,pfx,i)
-            os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/bw/")
-
-    g64name = '/home/jcasa/bees/out/bw/64bw%s.JPG'%(i)
-    g128name = '/home/jcasa/bees/out/bw/128bw%s.JPG'%(i)
-    print g64name, g128name
-    g64 = cv2.imread(g64name,cv2.IMREAD_GRAYSCALE)
-    g128 = cv2.imread(g128name,cv2.IMREAD_GRAYSCALE)
-    if g64 is not None:
-        g64c = g64.reshape([-1,1])-np.mean(g64.reshape([-1,1]))
-        g128c = g128.reshape([-1,1])-np.mean(g128.reshape([-1,1]))
-        c64 = np.hstack((c64,g64c))
-        c128 = np.hstack((c128,g128c))
-
-
-c64=np.delete(c64,(0),axis=1)
-c128=np.delete(c128,(0),axis=1)
-
-eigenvectors, eigenvalues, V = np.linalg.svd(c64, full_matrices=False)
-k=np.argmin(np.abs(.95-np.cumsum(eigenvalues)/np.sum(eigenvalues)))
-e64 = eigenvectors[:,0:k]
-p64 = np.dot(e64.T,c64)
-im64 = e64.reshape([64,64,-1])
-for i in range(0,k):
-    immax = np.max(np.max(im64[:,:,i]))
-    immin = np.min(np.min(im64[:,:,i]))
-    im64[:,:,i]=beescv.normalize(im64[:,:,i])
-    pfx = '64v'
-    retval = beescv.testwrite(im64[:,:,i],pfx,i)
-            
-eigenvectors, eigenvalues, V = np.linalg.svd(c128, full_matrices=False)
-k=np.argmin(np.abs(.95-np.cumsum(eigenvalues)/np.sum(eigenvalues)))
-e128 = eigenvectors[:,0:k]
-p128 = np.dot(e128.T,c128)
-im128 = e128.reshape([128,128,-1])
-for i in range(0,k):
-    immax = np.max(np.max(im128[:,:,i]))
-    immin = np.min(np.min(im128[:,:,i]))
-    im128[:,:,i]=beescv.normalize(im128[:,:,i])
-    pfx = '128v'
-    retval = beescv.testwrite(im128[:,:,i],pfx,i)
+for ic in c:
+    c[k]=np.delete(ic,(0),axis=1)    
+    eigenvectors, eigenvalues, V = np.linalg.svd(c[k], full_matrices=False)
+    kk=np.argmin(np.abs(.95-np.cumsum(eigenvalues)/np.sum(eigenvalues)))
+    e[k] = eigenvectors[:,0:kk]
+    p[k] = np.dot(e[k].T,c[k])
+    g2k = np.int(np.power(2,k+4))
+    im[k] = e[k].reshape([g2k,g2k,-1])
+    for i in range(0,kk):
+        im[k][:,:,i]=beescv.normalize(im[k][:,:,i])
+        pfx = str(g2k)+'v'
+        retval = beescv.testwrite(im[k][:,:,i],pfx,i)
+    k+=1
 
 os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/eigenbees/")
 
-methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
-            'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
+methods = ['cv2.TM_SQDIFF_NORMED']
 
 view='front'
 for i in range(1,8):
-    imname = "/home/jcasa/bees/data/{}{}.JPG".format(view,i)
+    #imname = "/home/jcasa/bees/data/{}{}.JPG".format(view,i)
+    imname = "/home/jcasa/bees/data/{}{}{}.jpg".format(view,i,'crop')
+
 
     print "Img ", imname
     img = cv2.imread(imname)
         
     if img is not None:
-        for meth in methods:
-            
+        for meth in methods:          
             imgmatch = img.copy()
             gray = cv2.cvtColor(imgmatch, cv2.COLOR_BGR2GRAY)
             gray = cv2.equalizeHist(gray)
             gray = np.float32(gray)
             method = eval(meth)
-            for j in range(0,e64.shape[1]):
-                # Apply template Matching
-                template=np.float32(im64[:,:,j])
-                res = cv2.matchTemplate(gray,template,method)
-                pfx=meth+'_64_%s_'%(j)
-                retval = beescv.testwrite(beescv.normalize(res),pfx,i)
-                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                print min_val,max_val,min_loc,max_loc
-            for j in range(0,e128.shape[1]):
-                # Apply template Matching
-                template=np.float32(im128[:,:,j])
-                res = cv2.matchTemplate(gray,template,method)
-                pfx=meth+'_128_%s_'%(j)
-                retval = beescv.testwrite(beescv.normalize(res),pfx,i)
-                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                print min_val,max_val,min_loc,max_loc
+            for k in range(0,5):
+                for j in range(0,e[k].shape[1]):
+                    # Apply template Matching
+                    template=np.float32(im[k][:,:,j])
+                    res = cv2.matchTemplate(gray,template,method)
+                    pfx=meth+'scale_%s_eig_%s_img_'%(np.power(2,k+4),j)
+                    retval = beescv.testwrite(beescv.normalize(res),pfx,i)
+                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+                    print min_loc
 
 os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/tm/")

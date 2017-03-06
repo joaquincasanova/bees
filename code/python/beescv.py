@@ -36,22 +36,17 @@ def localSD(mat, n):
 
     return sdn
 
-def ndvi_calc(imname):
-        
-    img = cv2.imread(imname)
-    b,g,r = cv2.split(img)
-    s=np.shape(r)
-    uno = np.ones(s)
-    nmax = np.maximum(-1*uno,(r-b)/(r+b))
-    ndvi = np.minimum(nmax,uno)
-
-    return ndvi, img
-
 def readsplit(imname):
         
     img = cv2.imread(imname)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    h,s,v = cv2.split(hsv)
+    if img is not None:
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(hsv)
+    else:
+        h = None
+        s = None
+        v = None
+        img = None
     return h, s, v, img
 
 def opening_adjust(mat):
@@ -74,6 +69,27 @@ def opening_adjust(mat):
     cv2.destroyAllWindows()
 
     return opening, n
+
+def thresh_adjust(mat):
+    
+    thresh =128
+    retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY)
+
+    cv2.namedWindow('thresh')
+    cv2.createTrackbar('thresh','thresh',0,255,nothing)
+    while(1):
+        cv2.imshow('thresh',out)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            break
+
+        thresh = cv2.getTrackbarPos('thresh','thresh')
+        retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY)
+
+
+    cv2.destroyAllWindows()
+
+    return out,thresh
 
 def bilat_adjust(mat):
 
