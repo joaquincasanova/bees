@@ -4,9 +4,7 @@ import os
 import beescv
 import time
 from matplotlib import pyplot as plt
-        
-os.system("rm /home/jcasa/bees/out/*.JPG")    
-
+   
 view='front'
     
 c16 = np.zeros([16*16,1])
@@ -15,18 +13,17 @@ c64 = np.zeros([64*64,1])
 c128 = np.zeros([128*128,1])
 c256 = np.zeros([256*256,1])
 c = [c16,c32,c64,c128,c256]
-        
-os.system("rm /home/jcasa/bees/out/bw/*.JPG")
-
+   
 for i in range(0,56):
     view = 'ex'
     imname = "/home/jcasa/bees/out/ex/{}{}.JPG".format(view,i)
     
     print "Img ", imname
-    img = cv2.imread(imname)
+    h,s,v,l,a,b,img=beescv.readsplit(imname)
+    
     if img is not None:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = cv2.equalizeHist(gray)
+
+        gray = cv2.equalizeHist(cv2.bilateralFilter(b,-1,7,7))
 
         gs = np.array(gray.shape)    
         ns = int(min(256,max(16, int(max(np.power(2,np.round(np.log2(gray.shape))))))))
@@ -60,8 +57,8 @@ for i in range(0,56):
 
         gray_pad = cv2.copyMakeBorder(gray_crop2,top,bottom,left,right,borderType=cv2.BORDER_REPLICATE)
         pfx = str(max(gray_pad.shape)) + 'bw'
-        retval = beescv.testwrite(gray_pad,pfx,i)
-        os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/bw/")
+        dr='/home/jcasa/bees/out/bw/'
+        retval = beescv.testwrite(dr,gray_pad,pfx,i)
 
         g16name = '/home/jcasa/bees/out/bw/16bw%s.JPG'%(i)
         g32name = '/home/jcasa/bees/out/bw/32bw%s.JPG'%(i)
@@ -134,37 +131,33 @@ for ic in c:
     for i in range(0,kk):
         im[k][:,:,i]=beescv.normalize(im[k][:,:,i])
         pfx = str(g2k)+'v'
-        retval = beescv.testwrite(im[k][:,:,i],pfx,i)
+        dr='/home/jcasa/bees/out/eigenbees/'
+        retval = beescv.testwrite(dr,im[k][:,:,i],pfx,i)
     k+=1
-
-os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/eigenbees/")
 
 methods = ['cv2.TM_SQDIFF_NORMED']
 
 view='front'
 for i in range(1,8):
-    #imname = "/home/jcasa/bees/data/{}{}.JPG".format(view,i)
     imname = "/home/jcasa/bees/data/{}{}{}.jpg".format(view,i,'crop')
 
 
     print "Img ", imname
-    img = cv2.imread(imname)
-        
+    h,s,v,l,a,b,img=beescv.readsplit(imname)
     if img is not None:
         for meth in methods:          
-            imgmatch = img.copy()
-            gray = cv2.cvtColor(imgmatch, cv2.COLOR_BGR2GRAY)
-            gray = cv2.equalizeHist(gray)
-            gray = np.float32(gray)
+            imgmatch = b.copy()
+            b=cv2.equalizwHist(b)
+            bilat = cv2.bilateralFilter(b, -1, 30, 20)
+            gray = np.float32(bilat)
             method = eval(meth)
             for k in range(0,5):
                 for j in range(0,e[k].shape[1]):
                     # Apply template Matching
                     template=np.float32(im[k][:,:,j])
                     res = cv2.matchTemplate(gray,template,method)
-                    pfx=meth+'scale_%s_eig_%s_img_'%(np.power(2,k+4),j)
-                    retval = beescv.testwrite(beescv.normalize(res),pfx,i)
+                    pfx=meth+'_scale_%s_eig_%s_img_'%(np.power(2,k+4),j)
+                    dr='/home/jcasa/bees/out/tm/'
+                    retval = beescv.testwrite(dr,beescv.normalize(res),pfx,i)
                     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
                     print min_loc
-
-os.system("mv /home/jcasa/bees/out/*.JPG /home/jcasa/bees/out/tm/")

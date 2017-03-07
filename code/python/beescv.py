@@ -12,8 +12,9 @@ def hist_plots(img):
     plt.close()
     #plot histograms
 
-def testwrite(img, pfx, i):
-    oname = "/home/jcasa/bees/out/{}{}.JPG".format(pfx,i)
+def testwrite(dr,img, pfx, i):
+    oname = "{}{}.JPG".format(pfx,i)
+    oname = dr+oname
     retval=cv2.imwrite(oname,img)
     print "Wrote ", oname, retval
     return retval
@@ -22,8 +23,8 @@ def nothing(x):
     pass
 
 def normalize(x):
-    y=(x-np.min(x))/(np.max(x)-np.min(x))*255.
-    return y
+    y=(x-np.min(x))/(np.max(x)-np.min(x))
+    return np.float32(y)
 
 def localSD(mat, n):
     
@@ -41,13 +42,18 @@ def readsplit(imname):
     img = cv2.imread(imname)
     if img is not None:
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
         h,s,v = cv2.split(hsv)
+        l,a,b = cv2.split(lab)
     else:
         h = None
         s = None
         v = None
+        l = None
+        a = None
+        b = None
         img = None
-    return h, s, v, img
+    return h, s, v, l, a, b, img
 
 def opening_adjust(mat):
 
@@ -73,7 +79,7 @@ def opening_adjust(mat):
 def thresh_adjust(mat):
     
     thresh =128
-    retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY)
+    retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY_INV)
 
     cv2.namedWindow('thresh')
     cv2.createTrackbar('thresh','thresh',0,255,nothing)
@@ -84,7 +90,7 @@ def thresh_adjust(mat):
             break
 
         thresh = cv2.getTrackbarPos('thresh','thresh')
-        retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY)
+        retval,out=cv2.threshold(mat, thresh, 255, cv2.THRESH_BINARY_INV)
 
 
     cv2.destroyAllWindows()
@@ -93,7 +99,7 @@ def thresh_adjust(mat):
 
 def bilat_adjust(mat):
 
-    bilat = cv2.adaptiveBilateralFilter(mat, -1, 7, 7)
+    bilat = cv2.bilateralFilter(mat, -1, 7, 7)
 
     cv2.namedWindow('bilat')
     cv2.createTrackbar('sigC','bilat',0,100,nothing)
@@ -118,7 +124,6 @@ def canny_contours(mat, n):
 
     cv2.namedWindow('edges')
     cv2.createTrackbar('MinVal','edges',0,255,nothing)
-    cv2.createTrackbar('MaxVal','edges',0,255,nothing)
     while(1):
         cv2.imshow('edges',edges)
         k = cv2.waitKey(1) & 0xFF
@@ -127,13 +132,23 @@ def canny_contours(mat, n):
 
             # get current positions of four trackbars
         minval = cv2.getTrackbarPos('MinVal','edges')
-        maxval = cv2.getTrackbarPos('MaxVal','edges')
+        maxval = 2*minval#cv2.getTrackbarPos('MaxVal','edges')
             
         edges = cv2.Canny(mat,minval,maxval,n)
 
     cv2.destroyAllWindows()
 
     contours, hierarchy = cv2.findContours(edges,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-
+    
     return edges, contours, minval, maxval
 
+def findBR(img,contours):
+    ecnt=enumerate(contours)
+    area=np.zeros(len(contours))
+    for c,cnt in ecnt:
+        area[c]=cv2.contourArea(cnt)
+    cmax=np.argmax(area)
+    cntMax=contours[cmax]
+    x,y,w,h=cv2.boundingRect(cntMax)
+    imgRect=img[y:(y+h),x:(x+w)]
+    return x,y,w,h,imgRect,cntMax
